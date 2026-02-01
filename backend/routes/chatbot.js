@@ -4,7 +4,7 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
 // OpenRouter API configuration
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'mistralai/mistral-7b-instruct:free'; // Using a reliable free model
 

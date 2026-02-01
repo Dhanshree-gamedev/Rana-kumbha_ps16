@@ -14,6 +14,7 @@ const messageRoutes = require('./routes/messages');
 const presenceRoutes = require('./routes/presence');
 const workshopRoutes = require('./routes/workshops');
 const badgeRoutes = require('./routes/badges');
+const chatbotRoutes = require('./routes/chatbot');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/presence', presenceRoutes);
 app.use('/api/workshops', workshopRoutes);
 app.use('/api/badges', badgeRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

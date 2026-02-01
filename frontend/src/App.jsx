@@ -20,6 +20,7 @@ import WorkshopDetailPage from './pages/WorkshopDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import Navbar from './components/Navbar';
+import Chatbot from './components/Chatbot';
 
 function App() {
     const { loading, isAuthenticated, needsProfileSetup } = useAuth();
@@ -138,6 +139,7 @@ function App() {
             </Routes>
 
             {isAuthenticated && !needsProfileSetup && <BottomNav />}
+            {isAuthenticated && !needsProfileSetup && <Chatbot />}
         </div>
     );
 }

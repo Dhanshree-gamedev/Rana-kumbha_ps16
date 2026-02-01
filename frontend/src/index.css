@@ -1198,18 +1198,18 @@ a:hover {
 /* Floating Toggle Button */
 .chatbot-toggle {
   position: fixed;
-  bottom: 100px;
+  bottom: 160px;
   right: 20px;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary-400) 0%, var(--secondary-400) 100%);
   color: white;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-  z-index: 1000;
+  z-index: 999;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -1224,12 +1224,12 @@ a:hover {
 /* Chat Window */
 .chatbot-window {
   position: fixed;
-  bottom: 170px;
+  bottom: 220px;
   right: 20px;
-  width: 360px;
+  width: 340px;
   max-width: calc(100vw - 40px);
-  height: 500px;
-  max-height: calc(100vh - 200px);
+  height: 450px;
+  max-height: calc(100vh - 250px);
   background: white;
   border-radius: var(--radius-xl);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
@@ -1483,18 +1483,19 @@ a:hover {
 /* Mobile Responsive */
 @media (max-width: 480px) {
   .chatbot-window {
-    bottom: 100px;
+    bottom: 180px;
     right: 10px;
     left: 10px;
     width: auto;
-    height: calc(100vh - 180px);
+    height: calc(100vh - 250px);
     max-height: none;
   }
 
   .chatbot-toggle {
-    bottom: 90px;
+    bottom: 120px;
     right: 15px;
-    width: 50px;
-    height: 50px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
   }
 }

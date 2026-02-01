@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,9 +7,14 @@ function VerifyEmailPage() {
     const { verifyEmail } = useAuth();
     const [status, setStatus] = useState('verifying'); // verifying, success, error
     const [message, setMessage] = useState('');
+    const hasVerified = useRef(false);
 
     useEffect(() => {
         const verify = async () => {
+            // Prevent double execution (React StrictMode)
+            if (hasVerified.current) return;
+            hasVerified.current = true;
+
             if (!token) {
                 setStatus('error');
                 setMessage('Invalid verification link');
@@ -27,7 +32,7 @@ function VerifyEmailPage() {
         };
 
         verify();
-    }, [token, verifyEmail]);
+    }, [token]);
 
     return (
         <div className="auth-page">

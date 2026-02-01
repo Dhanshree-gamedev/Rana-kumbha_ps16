@@ -200,7 +200,11 @@ function WorkshopDetailPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: '4px' }}>
                             <div className="avatar avatar-sm">
                                 {workshop.instructor.photo ? (
-                                    <img src={workshop.instructor.photo} alt={workshop.instructor.name} />
+                                    <img
+                                        src={`http://localhost:3001${workshop.instructor.photo}`}
+                                        alt={workshop.instructor.name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
                                 ) : workshop.instructor.name?.charAt(0)}
                             </div>
                             <span>{workshop.instructor.name}</span>
@@ -315,14 +319,41 @@ function WorkshopDetailPage() {
             {workshop.participants?.length > 0 && (
                 <div className="card" style={{ marginTop: 'var(--space-4)' }}>
                     <h3 style={{ marginBottom: 'var(--space-3)' }}>Participants ({workshop.participants.length})</h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                        gap: 'var(--space-3)'
+                    }}>
                         {workshop.participants.map(p => (
-                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                                <div className="avatar avatar-sm">
-                                    {p.photo ? <img src={p.photo} alt={p.name} /> : p.name?.charAt(0)}
+                            <div key={p.id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--space-2)',
+                                padding: 'var(--space-2)',
+                                background: 'var(--gray-50)',
+                                borderRadius: 'var(--radius-md)'
+                            }}>
+                                <div className="avatar avatar-sm" style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    flexShrink: 0
+                                }}>
+                                    {p.photo ? (
+                                        <img
+                                            src={`http://localhost:3001${p.photo}`}
+                                            alt={p.name}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                        />
+                                    ) : p.name?.charAt(0)}
                                 </div>
-                                <span>{p.name}</span>
-                                {p.attended && <span title="Attended">✓</span>}
+                                <span style={{
+                                    fontSize: '0.875rem',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}>{p.name}</span>
+                                {p.attended && <span title="Attended" style={{ color: 'var(--success-500)' }}>✓</span>}
                             </div>
                         ))}
                     </div>

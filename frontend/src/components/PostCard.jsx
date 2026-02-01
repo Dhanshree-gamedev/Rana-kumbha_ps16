@@ -120,9 +120,31 @@ function PostCard({ post, onLike, onDelete }) {
                 </div>
             )}
 
-            {/* Post Image */}
+            {/* Post Media (Image or Video) */}
             {post.image && (
-                <img src={post.image} alt="Post" className="post-image" />
+                post.mediaType === 'video' ? (
+                    <video
+                        src={post.image}
+                        className="post-image"
+                        style={{ cursor: 'pointer' }}
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (e.target.paused) {
+                                e.target.play();
+                            } else {
+                                e.target.pause();
+                            }
+                        }}
+                        onMouseEnter={(e) => e.target.play()}
+                        onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
+                    />
+                ) : (
+                    <img src={post.image} alt="Post" className="post-image" loading="lazy" />
+                )
             )}
 
             {/* Original Post (if shared) */}
@@ -144,17 +166,35 @@ function PostCard({ post, onLike, onDelete }) {
                         <p style={{ margin: 0, color: 'var(--gray-700)' }}>{post.originalPost.content}</p>
                     )}
                     {post.originalPost.image && (
-                        <img
-                            src={post.originalPost.image}
-                            alt="Original post"
-                            style={{
-                                width: '100%',
-                                borderRadius: 'var(--radius-md)',
-                                marginTop: 'var(--space-3)',
-                                maxHeight: '200px',
-                                objectFit: 'cover'
-                            }}
-                        />
+                        post.originalPost.mediaType === 'video' ? (
+                            <video
+                                src={post.originalPost.image}
+                                style={{
+                                    width: '100%',
+                                    borderRadius: 'var(--radius-md)',
+                                    marginTop: 'var(--space-3)',
+                                    maxHeight: '200px',
+                                    objectFit: 'cover'
+                                }}
+                                muted
+                                loop
+                                playsInline
+                                preload="metadata"
+                            />
+                        ) : (
+                            <img
+                                src={post.originalPost.image}
+                                alt="Original post"
+                                loading="lazy"
+                                style={{
+                                    width: '100%',
+                                    borderRadius: 'var(--radius-md)',
+                                    marginTop: 'var(--space-3)',
+                                    maxHeight: '200px',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                        )
                     )}
                 </div>
             )}

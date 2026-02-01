@@ -60,6 +60,14 @@ function BottomNav() {
                 </NavLink>
 
                 <NavLink
+                    to="/workshops"
+                    className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}
+                >
+                    <span className="bottom-nav-icon">🎓</span>
+                    <span className="bottom-nav-label">Learn</span>
+                </NavLink>
+
+                <NavLink
                     to="/messages"
                     className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}
                     style={{ position: 'relative' }}

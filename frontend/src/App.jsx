@@ -13,6 +13,8 @@ import ProfilePage from './pages/ProfilePage';
 import ConnectionsPage from './pages/ConnectionsPage';
 import ChatListPage from './pages/ChatListPage';
 import ChatPage from './pages/ChatPage';
+import WorkshopsPage from './pages/WorkshopsPage';
+import WorkshopDetailPage from './pages/WorkshopDetailPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -111,6 +113,22 @@ function App() {
                     element={
                         <ProtectedRoute requireProfile>
                             <ChatPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/workshops"
+                    element={
+                        <ProtectedRoute requireProfile>
+                            <WorkshopsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/workshop/:id"
+                    element={
+                        <ProtectedRoute requireProfile>
+                            <WorkshopDetailPage />
                         </ProtectedRoute>
                     }
                 />

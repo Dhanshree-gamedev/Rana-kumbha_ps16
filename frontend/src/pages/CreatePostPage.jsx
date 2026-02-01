@@ -7,36 +7,49 @@ function CreatePostPage() {
     const fileInputRef = useRef(null);
 
     const [content, setContent] = useState('');
-    const [image, setImage] = useState(null);
-    const [imagePreview, setImagePreview] = useState(null);
+    const [media, setMedia] = useState(null);
+    const [mediaPreview, setMediaPreview] = useState(null);
+    const [mediaType, setMediaType] = useState(null); // 'image' or 'video'
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleImageChange = (e) => {
+    const VALID_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+    const VALID_VIDEO_TYPES = ['video/mp4', 'video/webm'];
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
+    const handleMediaChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (!validTypes.includes(file.type)) {
-            setError('Please select a valid image file (JPG, JPEG, or PNG)');
+        const isImage = VALID_IMAGE_TYPES.includes(file.type);
+        const isVideo = VALID_VIDEO_TYPES.includes(file.type);
+
+        if (!isImage && !isVideo) {
+            setError('Please select a valid file (JPG, PNG, MP4, or WEBM)');
             return;
         }
 
-        // Validate file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
+        // Validate file size
+        if (isImage && file.size > MAX_IMAGE_SIZE) {
             setError('Image must be less than 5MB');
             return;
         }
+        if (isVideo && file.size > MAX_VIDEO_SIZE) {
+            setError('Video must be less than 50MB');
+            return;
+        }
 
-        setImage(file);
-        setImagePreview(URL.createObjectURL(file));
+        setMedia(file);
+        setMediaPreview(URL.createObjectURL(file));
+        setMediaType(isVideo ? 'video' : 'image');
         setError('');
     };
 
-    const removeImage = () => {
-        setImage(null);
-        setImagePreview(null);
+    const removeMedia = () => {
+        setMedia(null);
+        setMediaPreview(null);
+        setMediaType(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -56,8 +69,8 @@ function CreatePostPage() {
         try {
             const formData = new FormData();
             formData.append('content', content.trim());
-            if (image) {
-                formData.append('image', image);
+            if (media) {
+                formData.append('media', media);
             }
 
             await api.post('/posts', formData, {
@@ -121,22 +134,36 @@ function CreatePostPage() {
                         </div>
                     )}
 
-                    {/* Image Preview */}
-                    {imagePreview && (
+                    {/* Media Preview */}
+                    {mediaPreview && (
                         <div style={{ position: 'relative', marginBottom: 'var(--space-4)' }}>
-                            <img
-                                src={imagePreview}
-                                alt="Preview"
-                                style={{
-                                    width: '100%',
-                                    borderRadius: 'var(--radius-lg)',
-                                    maxHeight: '300px',
-                                    objectFit: 'cover'
-                                }}
-                            />
+                            {mediaType === 'video' ? (
+                                <video
+                                    src={mediaPreview}
+                                    style={{
+                                        width: '100%',
+                                        borderRadius: 'var(--radius-lg)',
+                                        maxHeight: '300px',
+                                        objectFit: 'cover'
+                                    }}
+                                    controls
+                                    muted
+                                />
+                            ) : (
+                                <img
+                                    src={mediaPreview}
+                                    alt="Preview"
+                                    style={{
+                                        width: '100%',
+                                        borderRadius: 'var(--radius-lg)',
+                                        maxHeight: '300px',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            )}
                             <button
                                 type="button"
-                                onClick={removeImage}
+                                onClick={removeMedia}
                                 style={{
                                     position: 'absolute',
                                     top: '8px',
@@ -153,11 +180,25 @@ function CreatePostPage() {
                             >
                                 ✕
                             </button>
+                            {mediaType === 'video' && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '8px',
+                                    left: '8px',
+                                    background: 'rgba(0,0,0,0.6)',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    🎥 Video
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Image Upload */}
-                    {!imagePreview && (
+                    {/* Media Upload */}
+                    {!mediaPreview && (
                         <div
                             className="image-upload"
                             onClick={() => fileInputRef.current?.click()}
@@ -165,16 +206,16 @@ function CreatePostPage() {
                         >
                             <div className="image-upload-placeholder">
                                 <span style={{ fontSize: '2rem', marginBottom: '8px', display: 'block' }}>📷</span>
-                                <span>Add an image (optional)</span>
+                                <span>Add an image or video (optional)</span>
                                 <p className="text-small text-muted" style={{ marginTop: '4px' }}>
-                                    JPG, JPEG, or PNG up to 5MB
+                                    Images: JPG, PNG up to 5MB • Videos: MP4, WEBM up to 50MB
                                 </p>
                             </div>
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept="image/jpeg,image/jpg,image/png"
-                                onChange={handleImageChange}
+                                accept="image/jpeg,image/jpg,image/png,video/mp4,video/webm"
+                                onChange={handleMediaChange}
                             />
                         </div>
                     )}

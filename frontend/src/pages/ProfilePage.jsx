@@ -11,6 +11,7 @@ function ProfilePage() {
 
     const [profile, setProfile] = useState(null);
     const [posts, setPosts] = useState([]);
+    const [badges, setBadges] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
@@ -27,6 +28,7 @@ function ProfilePage() {
     useEffect(() => {
         fetchProfile();
         fetchPosts();
+        fetchBadges();
     }, [id]);
 
     const fetchProfile = async () => {
@@ -53,6 +55,15 @@ function ProfilePage() {
             setPosts(response.data);
         } catch (err) {
             console.error('Fetch posts error:', err);
+        }
+    };
+
+    const fetchBadges = async () => {
+        try {
+            const response = await api.get(`/badges/user/${id}`);
+            setBadges(response.data);
+        } catch (err) {
+            console.error('Fetch badges error:', err);
         }
     };
 
@@ -295,7 +306,40 @@ function ProfilePage() {
                                 <div className="profile-stat-value">{profile.connectionCount || 0}</div>
                                 <div className="profile-stat-label">Connections</div>
                             </div>
+                            <div className="profile-stat">
+                                <div className="profile-stat-value">{badges.length}</div>
+                                <div className="profile-stat-label">Badges</div>
+                            </div>
                         </div>
+
+                        {/* Badges Section */}
+                        {badges.length > 0 && (
+                            <div style={{ marginTop: 'var(--space-4)' }}>
+                                <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                                    Earned Badges
+                                </h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', justifyContent: 'center' }}>
+                                    {badges.map((badge, idx) => (
+                                        <div
+                                            key={idx}
+                                            title={`${badge.name}: ${badge.description}${badge.workshopTitle ? ` (${badge.workshopTitle})` : ''}`}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                padding: '6px 12px',
+                                                background: 'var(--primary-light)',
+                                                borderRadius: 'var(--radius-full)',
+                                                fontSize: '0.875rem'
+                                            }}
+                                        >
+                                            <span>{badge.icon}</span>
+                                            <span>{badge.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ marginTop: 'var(--space-4)' }}>
                             {isOwnProfile ? (

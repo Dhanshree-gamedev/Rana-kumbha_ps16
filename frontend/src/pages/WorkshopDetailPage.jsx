@@ -8,26 +8,42 @@ function WorkshopDetailPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const messagesEndRef = useRef(null);
+    const lastMessageIdRef = useRef(0);
 
     const [workshop, setWorkshop] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [joining, setJoining] = useState(false);
 
-    // Live chat simulation state
+    // Live chat state
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
+    const [sendingMessage, setSendingMessage] = useState(false);
 
     useEffect(() => {
         fetchWorkshop();
-        // Poll for updates when live
-        const interval = setInterval(() => {
-            if (workshop?.status === 'live') {
-                fetchWorkshop();
-            }
-        }, 5000);
-        return () => clearInterval(interval);
     }, [id]);
+
+    // Poll for workshop updates and new messages when live
+    useEffect(() => {
+        if (!workshop) return;
+
+        const interval = setInterval(() => {
+            if (workshop.status === 'live') {
+                fetchWorkshop();
+                fetchMessages();
+            }
+        }, 3000); // Poll every 3 seconds for smoother chat
+
+        return () => clearInterval(interval);
+    }, [workshop?.status, id]);
+
+    // Fetch messages when workshop goes live or user joins
+    useEffect(() => {
+        if (workshop?.status === 'live' && (workshop.userJoined || workshop.isInstructor)) {
+            fetchMessages();
+        }
+    }, [workshop?.status, workshop?.userJoined, workshop?.isInstructor]);
 
     const fetchWorkshop = async () => {
         try {
@@ -37,6 +53,32 @@ function WorkshopDetailPage() {
             setError('Workshop not found');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchMessages = async () => {
+        try {
+            const since = lastMessageIdRef.current > 0 ? `?since=${lastMessageIdRef.current}` : '';
+            const response = await api.get(`/workshops/${id}/messages${since}`);
+
+            if (response.data.length > 0) {
+                if (lastMessageIdRef.current === 0) {
+                    // First load - replace all
+                    setChatMessages(response.data);
+                } else {
+                    // Append new messages
+                    setChatMessages(prev => [...prev, ...response.data]);
+                }
+                // Update last message ID
+                lastMessageIdRef.current = response.data[response.data.length - 1].id;
+
+                // Scroll to bottom
+                setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        } catch (err) {
+            // Silently handle - user may not have access
         }
     };
 
@@ -82,37 +124,31 @@ function WorkshopDetailPage() {
         }
     };
 
-    const handleMarkAttendance = async () => {
-        try {
-            await api.post(`/workshops/${id}/attend`);
-            setError('');
-            fetchWorkshop();
-        } catch (err) {
-            // Silently handle
-        }
-    };
-
-    // Simulate chat for live session
-    const handleChatSubmit = (e) => {
+    // Send chat message to backend
+    const handleChatSubmit = async (e) => {
         e.preventDefault();
-        if (!chatInput.trim()) return;
+        if (!chatInput.trim() || sendingMessage) return;
 
-        setChatMessages(prev => [...prev, {
-            id: Date.now(),
-            userId: user?.id,
-            userName: user?.name,
-            message: chatInput.trim(),
-            time: new Date().toLocaleTimeString()
-        }]);
-        setChatInput('');
+        setSendingMessage(true);
+        try {
+            const response = await api.post(`/workshops/${id}/messages`, {
+                content: chatInput.trim()
+            });
 
-        // Mark attendance when chatting
-        handleMarkAttendance();
+            // Add message to local state immediately for responsiveness
+            setChatMessages(prev => [...prev, response.data]);
+            lastMessageIdRef.current = response.data.id;
+            setChatInput('');
 
-        // Scroll to bottom
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+            // Scroll to bottom
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to send message');
+        } finally {
+            setSendingMessage(false);
+        }
     };
 
     const formatDateTime = (dateString) => {
@@ -287,14 +323,16 @@ function WorkshopDetailPage() {
                             <div key={msg.id} style={{
                                 marginBottom: 'var(--space-2)',
                                 padding: 'var(--space-2)',
-                                background: msg.userId === user?.id ? 'var(--primary-light)' : 'white',
+                                background: msg.user?.id === user?.id ? 'var(--primary-100)' : 'white',
                                 borderRadius: 'var(--radius-md)'
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--gray-500)' }}>
-                                    <span style={{ fontWeight: 600 }}>{msg.userName}</span>
-                                    <span>{msg.time}</span>
+                                    <span style={{ fontWeight: 600, color: msg.user?.id === user?.id ? 'var(--primary-600)' : 'var(--gray-700)' }}>
+                                        {msg.user?.name || 'Unknown'}
+                                    </span>
+                                    <span>{new Date(msg.createdAt).toLocaleTimeString()}</span>
                                 </div>
-                                <div style={{ marginTop: '4px' }}>{msg.message}</div>
+                                <div style={{ marginTop: '4px' }}>{msg.content}</div>
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
@@ -308,9 +346,16 @@ function WorkshopDetailPage() {
                             placeholder="Type a message..."
                             value={chatInput}
                             onChange={(e) => setChatInput(e.target.value)}
+                            disabled={sendingMessage}
                             style={{ flex: 1 }}
                         />
-                        <button type="submit" className="btn btn-primary">Send</button>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={sendingMessage || !chatInput.trim()}
+                        >
+                            {sendingMessage ? <span className="spinner spinner-sm"></span> : 'Send'}
+                        </button>
                     </form>
                 </div>
             )}

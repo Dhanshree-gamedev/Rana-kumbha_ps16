@@ -349,4 +349,132 @@ router.post('/:id/attend', authenticateWithProfile, (req, res) => {
     }
 });
 
+// GET /api/workshops/:id/messages - Get chat messages for a workshop
+router.get('/:id/messages', authenticate, (req, res) => {
+    try {
+        const workshopId = parseInt(req.params.id);
+        const { since } = req.query; // Optional: get messages after this ID
+
+        const workshop = db.prepare('SELECT * FROM workshops WHERE id = ?').get(workshopId);
+
+        if (!workshop) {
+            return res.status(404).json({ error: 'Workshop not found' });
+        }
+
+        // Check if user is instructor or participant
+        const isInstructor = workshop.instructor_id === req.user.id;
+        const isParticipant = db.prepare(
+            'SELECT id FROM workshop_participants WHERE workshop_id = ? AND user_id = ?'
+        ).get(workshopId, req.user.id);
+
+        if (!isInstructor && !isParticipant) {
+            return res.status(403).json({ error: 'You must join the workshop to view chat' });
+        }
+
+        let query = `
+            SELECT 
+                wm.id, wm.content, wm.created_at,
+                u.id as user_id, u.name as user_name, u.profile_photo
+            FROM workshop_messages wm
+            JOIN users u ON wm.user_id = u.id
+            WHERE wm.workshop_id = ?
+        `;
+        let params = [workshopId];
+
+        if (since) {
+            query += ` AND wm.id > ?`;
+            params.push(parseInt(since));
+        }
+
+        query += ` ORDER BY wm.created_at ASC LIMIT 200`;
+
+        const messages = db.prepare(query).all(...params);
+
+        res.json(messages.map(m => ({
+            id: m.id,
+            content: m.content,
+            createdAt: m.created_at,
+            user: {
+                id: m.user_id,
+                name: m.user_name,
+                photo: m.profile_photo
+            }
+        })));
+    } catch (error) {
+        console.error('Get workshop messages error:', error);
+        res.status(500).json({ error: 'Failed to get messages' });
+    }
+});
+
+// POST /api/workshops/:id/messages - Send a chat message in workshop
+router.post('/:id/messages', authenticateWithProfile, (req, res) => {
+    try {
+        const workshopId = parseInt(req.params.id);
+        const { content } = req.body;
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ error: 'Message content is required' });
+        }
+
+        const workshop = db.prepare('SELECT * FROM workshops WHERE id = ?').get(workshopId);
+
+        if (!workshop) {
+            return res.status(404).json({ error: 'Workshop not found' });
+        }
+
+        if (workshop.status !== 'live') {
+            return res.status(400).json({ error: 'Chat is only available during live sessions' });
+        }
+
+        // Check if user is instructor or participant
+        const isInstructor = workshop.instructor_id === req.user.id;
+        const isParticipant = db.prepare(
+            'SELECT id FROM workshop_participants WHERE workshop_id = ? AND user_id = ?'
+        ).get(workshopId, req.user.id);
+
+        if (!isInstructor && !isParticipant) {
+            return res.status(403).json({ error: 'You must join the workshop to send messages' });
+        }
+
+        // Insert message
+        const result = db.prepare(`
+            INSERT INTO workshop_messages (workshop_id, user_id, content)
+            VALUES (?, ?, ?)
+        `).run(workshopId, req.user.id, content.trim());
+
+        // Mark attendance
+        if (isParticipant) {
+            db.prepare(`
+                UPDATE workshop_participants 
+                SET attended = 1 
+                WHERE workshop_id = ? AND user_id = ?
+            `).run(workshopId, req.user.id);
+        }
+
+        // Get the created message with user info
+        const message = db.prepare(`
+            SELECT 
+                wm.id, wm.content, wm.created_at,
+                u.id as user_id, u.name as user_name, u.profile_photo
+            FROM workshop_messages wm
+            JOIN users u ON wm.user_id = u.id
+            WHERE wm.id = ?
+        `).get(result.lastInsertRowid);
+
+        res.status(201).json({
+            id: message.id,
+            content: message.content,
+            createdAt: message.created_at,
+            user: {
+                id: message.user_id,
+                name: message.user_name,
+                photo: message.profile_photo
+            }
+        });
+    } catch (error) {
+        console.error('Send workshop message error:', error);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
 module.exports = router;

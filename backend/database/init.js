@@ -149,6 +149,19 @@ async function initDatabase() {
     )
   `);
 
+  // Workshop chat messages
+  db.run(`
+    CREATE TABLE IF NOT EXISTS workshop_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workshop_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   // Badges table
   db.run(`
     CREATE TABLE IF NOT EXISTS badges (

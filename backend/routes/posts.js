@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../database/init');
 const { authenticate, authenticateWithProfile } = require('../middleware/auth');
-const { handlePostUpload } = require('../middleware/upload');
+const { handlePostUpload, handleMediaUpload, getMediaType, ALLOWED_VIDEO_TYPES } = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,7 +27,7 @@ router.get('/', authenticate, (req, res) => {
             const searchPattern = `%#${hashtag.toLowerCase()}%`;
             posts = db.prepare(`
         SELECT 
-          p.id, p.user_id, p.content, p.image, p.original_post_id, p.created_at,
+          p.id, p.user_id, p.content, p.image, p.media_type, p.original_post_id, p.created_at,
           u.name as author_name, u.profile_photo as author_photo,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
           (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
@@ -43,7 +43,7 @@ router.get('/', authenticate, (req, res) => {
             // Get all posts
             posts = db.prepare(`
         SELECT 
-          p.id, p.user_id, p.content, p.image, p.original_post_id, p.created_at,
+          p.id, p.user_id, p.content, p.image, p.media_type, p.original_post_id, p.created_at,
           u.name as author_name, u.profile_photo as author_photo,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
           (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count,
@@ -74,6 +74,7 @@ router.get('/', authenticate, (req, res) => {
                 userId: post.user_id,
                 content: post.content,
                 image: post.image,
+                mediaType: post.media_type || 'image',
                 createdAt: post.created_at,
                 authorName: post.author_name,
                 authorPhoto: post.author_photo,
@@ -87,6 +88,7 @@ router.get('/', authenticate, (req, res) => {
                     id: originalPost.id,
                     content: originalPost.content,
                     image: originalPost.image,
+                    mediaType: originalPost.media_type || 'image',
                     createdAt: originalPost.created_at,
                     authorId: originalPost.author_id,
                     authorName: originalPost.author_name,
@@ -103,8 +105,8 @@ router.get('/', authenticate, (req, res) => {
     }
 });
 
-// POST /api/posts - Create a new post
-router.post('/', authenticateWithProfile, handlePostUpload, (req, res) => {
+// POST /api/posts - Create a new post (supports both image and video)
+router.post('/', authenticateWithProfile, handleMediaUpload, (req, res) => {
     try {
         const { content } = req.body;
 
@@ -112,12 +114,25 @@ router.post('/', authenticateWithProfile, handlePostUpload, (req, res) => {
             return res.status(400).json({ error: 'Post content is required' });
         }
 
-        const imagePath = req.file ? `/uploads/posts/${req.file.filename}` : null;
+        // Determine media path and type
+        let mediaPath = null;
+        let mediaType = null;
+
+        if (req.file) {
+            const isVideo = ALLOWED_VIDEO_TYPES.includes(req.file.mimetype);
+            if (isVideo) {
+                mediaPath = `/uploads/videos/${req.file.filename}`;
+                mediaType = 'video';
+            } else {
+                mediaPath = `/uploads/posts/${req.file.filename}`;
+                mediaType = 'image';
+            }
+        }
 
         const result = db.prepare(`
-      INSERT INTO posts (user_id, content, image, created_at)
-      VALUES (?, ?, ?, datetime('now'))
-    `).run(req.user.id, content.trim(), imagePath);
+      INSERT INTO posts (user_id, content, image, media_type, created_at)
+      VALUES (?, ?, ?, ?, datetime('now'))
+    `).run(req.user.id, content.trim(), mediaPath, mediaType);
 
         // Get the created post with author info
         const postId = result.lastInsertRowid;
@@ -128,7 +143,7 @@ router.post('/', authenticateWithProfile, handlePostUpload, (req, res) => {
 
         const post = db.prepare(`
       SELECT 
-        p.id, p.user_id, p.content, p.image, p.created_at,
+        p.id, p.user_id, p.content, p.image, p.media_type, p.created_at,
         u.name as author_name, u.profile_photo as author_photo
       FROM posts p
       JOIN users u ON p.user_id = u.id
@@ -144,6 +159,7 @@ router.post('/', authenticateWithProfile, handlePostUpload, (req, res) => {
             userId: post.user_id,
             content: post.content,
             image: post.image,
+            mediaType: post.media_type || 'image',
             createdAt: post.created_at,
             authorName: post.author_name,
             authorPhoto: post.author_photo,

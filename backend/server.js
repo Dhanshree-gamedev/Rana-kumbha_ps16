@@ -11,6 +11,9 @@ const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts');
 const connectionRoutes = require('./routes/connections');
 const messageRoutes = require('./routes/messages');
+const presenceRoutes = require('./routes/presence');
+const workshopRoutes = require('./routes/workshops');
+const badgeRoutes = require('./routes/badges');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +35,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/presence', presenceRoutes);
+app.use('/api/workshops', workshopRoutes);
+app.use('/api/badges', badgeRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

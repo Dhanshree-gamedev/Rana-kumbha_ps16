@@ -39,6 +39,8 @@ async function initDatabase() {
       is_verified INTEGER DEFAULT 0,
       verification_token TEXT,
       profile_completed INTEGER DEFAULT 0,
+      is_online INTEGER DEFAULT 0,
+      last_seen TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -62,6 +64,7 @@ async function initDatabase() {
       user_id INTEGER NOT NULL,
       content TEXT NOT NULL,
       image TEXT,
+      media_type TEXT DEFAULT 'image',
       original_post_id INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -116,6 +119,66 @@ async function initDatabase() {
     )
   `);
 
+  // Workshops table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS workshops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      instructor_id INTEGER NOT NULL,
+      scheduled_at TEXT NOT NULL,
+      duration INTEGER DEFAULT 60,
+      max_participants INTEGER DEFAULT 50,
+      status TEXT DEFAULT 'scheduled',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Workshop participants
+  db.run(`
+    CREATE TABLE IF NOT EXISTS workshop_participants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workshop_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at TEXT DEFAULT (datetime('now')),
+      attended INTEGER DEFAULT 0,
+      FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(workshop_id, user_id)
+    )
+  `);
+
+  // Badges table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS badges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      icon TEXT
+    )
+  `);
+
+  // User badges
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_badges (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      badge_id INTEGER NOT NULL,
+      workshop_id INTEGER,
+      awarded_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE,
+      FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE SET NULL,
+      UNIQUE(user_id, badge_id, workshop_id)
+    )
+  `);
+
+  // Seed default badges
+  db.run(`INSERT OR IGNORE INTO badges (name, description, icon) VALUES ('Workshop Attendee', 'Attended a workshop session', '🎓')`);
+  db.run(`INSERT OR IGNORE INTO badges (name, description, icon) VALUES ('Active Participant', 'Actively participated in discussions', '🔥')`);
+  db.run(`INSERT OR IGNORE INTO badges (name, description, icon) VALUES ('Merit Badge', 'Recognized for outstanding contribution', '🥇')`);
+
   // Create indexes
   db.run('CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC)');
@@ -125,6 +188,8 @@ async function initDatabase() {
   db.run('CREATE INDEX IF NOT EXISTS idx_connections_receiver ON connections(receiver_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)');
   db.run('CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_workshops_status ON workshops(status)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_workshop_participants ON workshop_participants(workshop_id)');
 
   saveDatabase();
   dbReady = true;
